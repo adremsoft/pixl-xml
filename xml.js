@@ -77,11 +77,6 @@ export class XML {
             }
         }
 
-        // stringify buffers
-        if (this.text instanceof Buffer) {
-            this.text = this.text.toString();
-        }
-
         this.tree = {};
         this.errors = [];
         this.piNodeList = [];
