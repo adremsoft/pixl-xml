@@ -29,7 +29,7 @@
 const xml_header = '<?xml version="1.0"?>';
 const re_valid_tag_name = /^\w[\w\-:.]*$/;
 
-export class XML {
+class XML {
     preserveDocumentNode = false;
     preserveAttributes = false;
     preserveWhitespace = false;
@@ -44,11 +44,11 @@ export class XML {
     patCDATATag = /^\s*!\s*\[\s*CDATA/;
     patStandardTag = /^\s*(\/?)([\w\-:.]+)\s*([\s\S]*)$/;
     patSelfClosing = /\/\s*$/;
-    patAttrib = new RegExp("([\\w\\-\:\.]+)\\s*=\\s*([\\\"\\'])([^\\2]*?)\\2", "g");
+    patAttrib = new RegExp("([\\w\\-\:\.]+)\\s*=\\s*([\"\'])([^\\2]*?)\\2", "g");
     patPINode = /^\s*\?\s*([\w\-:]+)\s*(.*)$/;
     patEndComment = /--$/;
     patNextClose = /([^>]*?)>/g;
-    patExternalDTDNode = new RegExp("^\\s*\!DOCTYPE\\s+([\\w\\-\:]+)\\s+(SYSTEM|PUBLIC)\\s+\\\"([^\\\"]+)\\\"");
+    patExternalDTDNode = new RegExp("^\\s*\!DOCTYPE\\s+([\\w\\-\:]+)\\s+(SYSTEM|PUBLIC)\\s+\"([^\"]+)\"");
     patInlineDTDNode = /^\s*!DOCTYPE\s+([\w\-:]+)\s+\[/;
     patEndDTD = /]$/;
     patDTDNode = /^\s*!DOCTYPE\s+([\w\-:]+)\s+\[(.*)]/;
@@ -58,24 +58,17 @@ export class XML {
     attribsKey = '_Attribs';
     dataKey = '_Data';
 
-    constructor(args, opts) {
+    constructor(args = '', opts) {
         // class constructor for XML parser class
         // pass in args hash or text to parse
-        if (!args) args = '';
-        if (isaHash(args)) {
-            for (let key in args) {
-                this[key] = args[key];
-            }
+        if (typeof args !== "string") {
+            this.text = '';
+            Object.assign(this, args);
         } else {
-            this.text = args || '';
+            this.text = args;
         }
-
         // options may be 2nd argument as well
-        if (opts) {
-            for (let key in opts) {
-                this[key] = opts[key];
-            }
-        }
+        Object.assign(this, opts);
 
         this.tree = {};
         this.errors = [];
@@ -107,12 +100,11 @@ export class XML {
 
         // match each tag, plus preceding text
         while (matches = this.patTag.exec(this.text)) {
-            const before = matches[1];
-            let tag = matches[2];
+            let [, before, tag] = matches;
 
             // text leading up to tag = content of parent node
             if (before.match(/\S/)) {
-                if (typeof (branch[this.dataKey]) != 'undefined') {
+                if (branch[this.dataKey] !== undefined) {
                     branch[this.dataKey] += ' ';
                 } else {
                     branch[this.dataKey] = '';
@@ -131,7 +123,7 @@ export class XML {
                     tag = this.parseDTDNode(tag);
                 } else if (tag.match(this.patCDATATag)) {
                     tag = this.parseCDATANode(tag);
-                    if (typeof (branch[this.dataKey]) != 'undefined') {
+                    if (branch[this.dataKey] !== undefined) {
                         branch[this.dataKey] += ' ';
                     } else {
                         branch[this.dataKey] = '';
@@ -148,7 +140,7 @@ export class XML {
             } // special tag
             else {
                 // Tag is standard, so parse name and attributes (if any)
-                let matches = tag.match(this.patStandardTag);
+                matches = tag.match(this.patStandardTag);
                 if (!matches) {
                     this.throwParseError("Malformed tag", tag);
                     break;
@@ -161,7 +153,7 @@ export class XML {
                 // If this is a closing tag, make sure it matches its opening tag
                 if (closing) {
                     if (nodeName === (name || '')) {
-                        foundClosing = 1;
+                        foundClosing = true;
                         break;
                     } else {
                         this.throwParseError("Mismatched closing tag (expected </" + name + ">)", tag);
@@ -197,20 +189,22 @@ export class XML {
                     // Recurse for nested nodes
                     if (!selfClosing) {
                         this.parse(leaf, nodeName);
-                        if (this.error()) break;
+                        if (this.error()) {
+                            break;
+                        }
                     }
 
                     // Compress into simple node if text only
                     const num_leaf_keys = numKeys(leaf);
-                    if ((typeof (leaf[this.dataKey]) != 'undefined') && (num_leaf_keys === 1)) {
+                    if (leaf[this.dataKey] !== undefined && num_leaf_keys === 1) {
                         leaf = leaf[this.dataKey];
                     } else if (!num_leaf_keys) {
                         leaf = '';
                     }
 
                     // Add leaf to parent branch
-                    if (typeof (branch[nodeName]) != 'undefined') {
-                        if (isaArray(branch[nodeName])) {
+                    if (branch[nodeName] !== undefined) {
+                        if (Array.isArray(branch[nodeName])) {
                             branch[nodeName].push(leaf);
                         } else {
                             const temp = branch[nodeName];
@@ -222,7 +216,9 @@ export class XML {
                         branch[nodeName] = leaf;
                     }
 
-                    if (this.error() || (branch === this.tree)) break;
+                    if (this.error() || (branch === this.tree)) {
+                        break;
+                    }
                 } // not closing
             } // standard tag
         } // main reg exp
@@ -232,9 +228,9 @@ export class XML {
             this.throwParseError("Missing closing tag (expected </" + name + ">)", name);
         }
 
-        // If we are the master node, finish parsing and setup our doc node
+        // If we are the master node, finish parsing and set up our doc node
         if (branch === this.tree) {
-            if (typeof (this.tree[this.dataKey]) != 'undefined') {
+            if (this.tree[this.dataKey] !== undefined) {
                 delete this.tree[this.dataKey];
             }
 
@@ -276,15 +272,21 @@ export class XML {
     getError(error) {
         // get formatted error
         let text = '';
-        if (!error) return '';
+        if (!error) {
+            return '';
+        }
 
         text = (error.type || 'General') + ' Error';
-        if (error.code) text += ' ' + error.code;
+        if (error.code) {
+            text += ' ' + error.code;
+        }
         text += ': ' + error.key;
-
-        if (error.line) text += ' on line ' + error.line;
-        if (error.text) text += ': ' + error.text;
-
+        if (error.line) {
+            text += ' on line ' + error.line;
+        }
+        if (error.text) {
+            text += ': ' + error.text;
+        }
         return text;
     }
 
@@ -309,11 +311,11 @@ export class XML {
 
     parseCommentNode(tag) {
         // Parse Comment Node, e.g. <!-- hello -->
-        let matches = null;
         this.patNextClose.lastIndex = this.patTag.lastIndex;
 
         while (!tag.match(this.patEndComment)) {
-            if (matches = this.patNextClose.exec(this.text)) {
+            const matches = this.patNextClose.exec(this.text);
+            if (matches) {
                 tag += '>' + matches[1];
             } else {
                 this.throwParseError("Unclosed comment tag", tag);
@@ -326,8 +328,6 @@ export class XML {
 
     parseDTDNode(tag) {
         // Parse Document Type Descriptor Node, e.g. <!DOCTYPE ... >
-        let matches = null;
-
         if (tag.match(this.patExternalDTDNode)) {
             // tag is external, and thus self-closing
             this.dtdNodeList.push(tag);
@@ -336,7 +336,8 @@ export class XML {
             this.patNextClose.lastIndex = this.patTag.lastIndex;
 
             while (!tag.match(this.patEndDTD)) {
-                if (matches = this.patNextClose.exec(this.text)) {
+                const matches = this.patNextClose.exec(this.text)
+                if (matches) {
                     tag += '>' + matches[1];
                 } else {
                     this.throwParseError("Unclosed DTD tag", tag);
@@ -362,11 +363,11 @@ export class XML {
 
     parseCDATANode(tag) {
         // Parse CDATA Node, e.g. <![CDATA[Brooks & Shields]]>
-        let matches = null;
         this.patNextClose.lastIndex = this.patTag.lastIndex;
 
         while (!tag.match(this.patEndCDATA)) {
-            if (matches = this.patNextClose.exec(this.text)) {
+            const matches = this.patNextClose.exec(this.text);
+            if (matches) {
                 tag += '>' + matches[1];
             } else {
                 this.throwParseError("Unclosed CDATA tag", tag);
@@ -375,7 +376,8 @@ export class XML {
         }
 
         this.patTag.lastIndex = this.patNextClose.lastIndex;
-        if (matches = tag.match(this.patCDATANode)) {
+        const matches = tag.match(this.patCDATANode);
+        if (matches) {
             return matches[1];
         } else {
             this.throwParseError("Malformed CDATA tag", tag);
@@ -388,10 +390,8 @@ export class XML {
         return this.tree;
     }
 
-
-    compose(indent_string, eol) {
+    compose(indent_string, eol = '\n') {
         // compose tree back into XML
-        if (typeof (eol) == 'undefined') eol = "\n";
         let tree = this.tree;
         if (this.preserveDocumentNode) {
             tree = tree[this.documentNodeName];
@@ -401,16 +401,16 @@ export class XML {
         const body = raw.replace(/^\s*<\?.+?\?>\s*/, '');
         let xml = '';
 
-        if (this.piNodeList.length) {
-            for (let idx = 0, len = this.piNodeList.length; idx < len; idx++) {
+        if (this.piNodeList.length > 0) {
+            for (let idx = 0, len = this.piNodeList.length; idx < len; idx += 1) {
                 xml += '<' + this.piNodeList[idx] + '>' + eol;
             }
         } else {
             xml += xml_header + eol;
         }
 
-        if (this.dtdNodeList.length) {
-            for (let idx = 0, len = this.dtdNodeList.length; idx < len; idx++) {
+        if (this.dtdNodeList.length > 0) {
+            for (let idx = 0, len = this.dtdNodeList.length; idx < len; idx += 1) {
                 xml += '<' + this.dtdNodeList[idx] + '>' + eol;
             }
         }
@@ -424,92 +424,75 @@ export class XML {
 // Static Utility Functions:
 //
 
-export function parse(text, opts) {
+function parse(text, opts = {}) {
     // turn text into XML tree quickly
-    if (!opts) opts = {};
     opts.text = text;
     const parser = new XML(opts);
     return parser.error() ? parser.getLastError() : parser.getTree();
 }
 
-export function trim(text) {
+function trim(text) {
     // strip whitespace from beginning and end of string
-    if (text == null) {
-        return '';
-    }
-
-    if (text && text.replace) {
-        text = text.replace(/^\s+/, "");
-        text = text.replace(/\s+$/, "");
-    }
-
-    return text;
+    return text?.trim() ?? '';
 }
 
-export function encodeEntities(text) {
+function encodeEntities(text) {
     // Simple entitize exports.for = function for composing XML
     if (text == null) {
         return '';
     }
-    if (text && text.replace) {
-        text = text.replace(/&/g, "&amp;"); // MUST BE FIRST
-        text = text.replace(/</g, "&lt;");
-        text = text.replace(/>/g, "&gt;");
+    if (text?.replace) {
+        text = text
+            .replace(/&/g, "&amp;") // MUST BE FIRST
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
     }
 
     return text;
 }
 
-export function encodeAttribEntities(text) {
+function encodeAttribEntities(text) {
     // Simple entitize exports.for = function for composing XML attributes
     if (text == null) {
         return '';
     }
 
-    if (text && text.replace) {
-        text = text.replace(/&/g, "&amp;"); // MUST BE FIRST
-        text = text.replace(/</g, "&lt;");
-        text = text.replace(/>/g, "&gt;");
-        text = text.replace(/"/g, "&quot;");
-        text = text.replace(/'/g, "&apos;");
+    if (text?.replace) {
+        text = text
+            .replace(/&/g, "&amp;") // MUST BE FIRST
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&apos;");
     }
 
     return text;
 }
 
-export function decodeEntities(text) {
+function decodeEntities(text) {
     // Decode XML entities into raw ASCII
     if (text == null) {
         return '';
     }
 
-    if (text && text.replace && text.match(/&/)) {
-        text = text.replace(/&lt;/g, "<");
-        text = text.replace(/&gt;/g, ">");
-        text = text.replace(/&quot;/g, '"');
-        text = text.replace(/&apos;/g, "'");
-        text = text.replace(/&amp;/g, "&"); // MUST BE LAST
+    if (text?.replace && text.match(/&/)) {
+        text = text
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'")
+            .replace(/&amp;/g, "&"); // MUST BE LAST
     }
 
     return text;
 }
 
-export function stringify(node, name, indent, indent_string, eol, sort) {
+function stringify(node, name, indent, indent_string = "\t", eol = '\n', sort = true) {
     // Compose node into XML including attributes
-    // Recurse for child nodes
-    if (typeof (indent_string) == 'undefined') {
-        indent_string = "\t";
-    }
-    if (typeof (eol) === 'undefined') {
-        eol = "\n";
-    }
-    if (typeof (sort) === 'undefined'){
-        sort = true;
-    }
     let xml = "";
 
     // If this is the root node, set the indent to 0
-    // and setup the XML header (PI node)
+    // and set up the XML header (PI node)
     if (!indent) {
         indent = 0;
         xml = xml_header + eol;
@@ -521,28 +504,22 @@ export function stringify(node, name, indent, indent_string, eol, sort) {
         }
     }
 
-    // Setup the indent text
-    let indent_text = "";
-    for (let k = 0; k < indent; k++) {
-        indent_text += indent_string;
-    }
+    // Set up the indent text
+    const indent_text = "".padStart(indent * indent_string.length, indent_string);
 
-    if ((typeof (node) == 'object') && (node != null)) {
+    if (node && typeof node === 'object') {
         // node is object -- now see if it is an array or hash
-        if (!node.length) { // what about zero-length array?
+        if (!Array.isArray(node)) { // what about zero-length array?
             // node is hash
             xml += indent_text + "<" + name;
 
-            let num_keys = 0;
+            let num_keys = numKeys(node);
             let has_attribs = 0;
-            for (let key in node) {
-                num_keys++;
-            } // there must be a better way...
 
-            if (node["_Attribs"]) {
+            if (node["_Attribs"] != null) {
                 has_attribs = 1;
                 const sorted_keys = sort ? hashKeysToArray(node["_Attribs"]).sort() : hashKeysToArray(node["_Attribs"]);
-                for (let idx = 0, len = sorted_keys.length; idx < len; idx++) {
+                for (let idx = 0, len = sorted_keys.length; idx < len; idx += 1) {
                     const key = sorted_keys[idx];
                     xml += " " + key + "=\"" + encodeAttribEntities(node["_Attribs"][key]) + "\"";
                 }
@@ -560,9 +537,9 @@ export function stringify(node, name, indent, indent_string, eol, sort) {
                     xml += eol;
 
                     const sorted_keys = sort ? hashKeysToArray(node).sort() : hashKeysToArray(node);
-                    for (let idx = 0, len = sorted_keys.length; idx < len; idx++) {
+                    for (let idx = 0, len = sorted_keys.length; idx < len; idx += 1) {
                         const key = sorted_keys[idx];
-                        if ((key !== "_Attribs") && key.match(re_valid_tag_name)) {
+                        if (key !== "_Attribs" && key.match(re_valid_tag_name)) {
                             // recurse for node, with incremented indent value
                             xml += stringify(node[key], key, indent + 1, indent_string, eol, sort);
                         } // not _Attribs key
@@ -577,7 +554,7 @@ export function stringify(node, name, indent, indent_string, eol, sort) {
         } // standard node
         else {
             // node is array
-            for (let idx = 0; idx < node.length; idx++) {
+            for (let idx = 0; idx < node.length; idx += 1) {
                 // recurse for node in array with same indent
                 xml += stringify(node[idx], name, indent, indent_string, eol, sort);
             }
@@ -591,56 +568,63 @@ export function stringify(node, name, indent, indent_string, eol, sort) {
     return xml;
 }
 
-export function alwaysArray(obj, key) {
+function alwaysArray(obj, key) {
     // if object is not array, return array containing object
-    // if key is passed, work like XMLalwaysarray() instead
     if (key) {
-        if ((typeof (obj[key]) != 'object') || (typeof (obj[key].length) == 'undefined')) {
-            const temp = obj[key];
-            delete obj[key];
-            obj[key] = [];
-            obj[key][0] = temp;
+        const v = obj[key];
+        if (v && !Array.isArray(v)) {
+            obj[key] = [v];
         }
         return null;
-    } else {
-        if ((typeof (obj) != 'object') || (typeof (obj.length) == 'undefined')) {
-            return [obj];
-        } else return obj;
     }
+    return obj && !Array.isArray(obj) ? [obj] : obj;
 }
 
-export function hashKeysToArray(hash) {
+function hashKeysToArray(hash) {
     // convert hash keys to array (discard values)
-    const array = [];
-    for (let key in hash) {
-        array.push(key);
-    }
-    return array;
+    return Object.keys(hash);
 }
 
-export function isaArray(arg) {
+function isaArray(arg) {
     // determine if arg is an array or is array-like
     return Array.isArray(arg);
 }
 
-export  function isaHash(arg) {
+function isaHash(arg) {
     // determine if arg is a hash
-    return (!!arg && (typeof (arg) == 'object') && !isaArray(arg));
+    return (arg != null && typeof arg === 'object' && !Array.isArray(arg));
 }
 
-export function firstKey(hash) {
+function firstKey(hash) {
     // return first key from hash (unordered)
+    // noinspection LoopStatementThatDoesntLoopJS
     for (let key in hash) {
         return key;
     }
     return null; // no keys in hash
 }
 
-export  function numKeys(hash) {
+function numKeys(hash) {
     // count the number of keys in a hash
     let count = 0;
     for (let a in hash) {
         count++;
     }
     return count;
+}
+
+module.exports = {
+    XML,
+    parse,
+    trim,
+    encodeEntities,
+    encodeAttribEntities,
+    decodeEntities,
+    stringify,
+    alwaysArray,
+    hashKeysToArray,
+    isaArray,
+    isaHash,
+    firstKey,
+    numKeys
 }
