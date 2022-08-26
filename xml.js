@@ -30,34 +30,6 @@ const xml_header = '<?xml version="1.0"?>';
 const re_valid_tag_name = /^\w[\w\-:.]*$/;
 
 class XML {
-    preserveDocumentNode = false;
-    preserveAttributes = false;
-    preserveWhitespace = false;
-    lowerCase = false;
-    forceArrays = false;
-
-    patTag = /([^<]*?)<([^>]+)>/g;
-    patSpecialTag = /^\s*([!?])/;
-    patPITag = /^\s*\?/;
-    patCommentTag = /^\s*!--/;
-    patDTDTag = /^\s*!DOCTYPE/;
-    patCDATATag = /^\s*!\s*\[\s*CDATA/;
-    patStandardTag = /^\s*(\/?)([\w\-:.]+)\s*([\s\S]*)$/;
-    patSelfClosing = /\/\s*$/;
-    patAttrib = new RegExp("([\\w\\-\:\.]+)\\s*=\\s*([\"\'])([^\\2]*?)\\2", "g");
-    patPINode = /^\s*\?\s*([\w\-:]+)\s*(.*)$/;
-    patEndComment = /--$/;
-    patNextClose = /([^>]*?)>/g;
-    patExternalDTDNode = new RegExp("^\\s*\!DOCTYPE\\s+([\\w\\-\:]+)\\s+(SYSTEM|PUBLIC)\\s+\"([^\"]+)\"");
-    patInlineDTDNode = /^\s*!DOCTYPE\s+([\w\-:]+)\s+\[/;
-    patEndDTD = /]$/;
-    patDTDNode = /^\s*!DOCTYPE\s+([\w\-:]+)\s+\[(.*)]/;
-    patEndCDATA = /]]$/;
-    patCDATANode = /^\s*!\s*\[\s*CDATA\s*\[([^]*)]]/;
-
-    attribsKey = '_Attribs';
-    dataKey = '_Data';
-
     constructor(args = '', opts) {
         // class constructor for XML parser class
         // pass in args hash or text to parse
@@ -603,6 +575,36 @@ function firstKey(hash) {
     }
     return null; // no keys in hash
 }
+
+Object.assign(XML.prototype, {
+    preserveDocumentNode: false,
+    preserveAttributes: false,
+    preserveWhitespace: false,
+    lowerCase: false,
+    forceArrays: false,
+
+    patTag: /([^<]*?)<([^>]+)>/g,
+    patSpecialTag: /^\s*([!?])/,
+    patPITag: /^\s*\?/,
+    patCommentTag: /^\s*!--/,
+    patDTDTag: /^\s*!DOCTYPE/,
+    patCDATATag: /^\s*!\s*\[\s*CDATA/,
+    patStandardTag: /^\s*(\/?)([\w\-:.]+)\s*([\s\S]*)$/,
+    patSelfClosing: /\/\s*$/,
+    patAttrib: new RegExp("([\\w\\-\:\.]+)\\s*=\\s*([\"\'])([^\\2]*?)\\2", "g"),
+    patPINode: /^\s*\?\s*([\w\-:]+)\s*(.*)$/,
+    patEndComment: /--$/,
+    patNextClose: /([^>]*?)>/g,
+    patExternalDTDNode: new RegExp("^\\s*\!DOCTYPE\\s+([\\w\\-\:]+)\\s+(SYSTEM|PUBLIC)\\s+\"([^\"]+)\""),
+    patInlineDTDNode: /^\s*!DOCTYPE\s+([\w\-:]+)\s+\[/,
+    patEndDTD: /]$/,
+    patDTDNode: /^\s*!DOCTYPE\s+([\w\-:]+)\s+\[(.*)]/,
+    patEndCDATA: /]]$/,
+    patCDATANode: /^\s*!\s*\[\s*CDATA\s*\[([^]*)]]/,
+
+    attribsKey: '_Attribs',
+    dataKey: '_Data',
+})
 
 function numKeys(hash) {
     // count the number of keys in a hash
