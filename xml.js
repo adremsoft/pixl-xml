@@ -177,8 +177,7 @@ class XML {
                         if (Array.isArray(branch[nodeName])) {
                             branch[nodeName].push(leaf);
                         } else {
-                            const temp = branch[nodeName];
-                            branch[nodeName] = [temp, leaf];
+                            branch[nodeName] = [branch[nodeName], leaf];
                         }
                     } else if (this.forceArrays && (branch !== this.tree)) {
                         branch[nodeName] = [leaf];
@@ -220,14 +219,14 @@ class XML {
         // log error and locate current line number in source XML document
         const parsedSource = this.text.substring(0, this.patTag.lastIndex);
         const eolMatch = parsedSource.match(/\n/g);
-        let lineNum = (eolMatch ? eolMatch.length : 0) + 1;
-        lineNum -= tag.match(/\n/) ? tag.match(/\n/g).length : 0;
+        let line = (eolMatch ? eolMatch.length : 0) + 1;
+        line -= tag.match(/\n/) ? tag.match(/\n/g).length : 0;
 
         this.errors.push({
             type: 'Parse',
-            key: key,
+            key,
             text: '<' + tag + '>',
-            line: lineNum
+            line
         });
 
         // Throw actual error (must wrap parse in try/catch)
@@ -360,33 +359,33 @@ class XML {
         return this.tree;
     }
 
-    compose(indent_string, eol = '\n') {
+    compose(indentString, eol = '\n') {
         // compose tree back into XML
         let tree = this.tree;
         if (this.preserveDocumentNode) {
             tree = tree[this.documentNodeName];
         }
 
-        const raw = stringify(tree, this.documentNodeName, 0, indent_string, eol);
+        const raw = stringify(tree, this.documentNodeName, 0, indentString, eol);
         const body = raw.replace(/^\s*<\?.+?\?>\s*/, '');
-        let xml = '';
+        const xml = [];
 
         if (this.piNodeList.length > 0) {
             for (let idx = 0, len = this.piNodeList.length; idx < len; idx += 1) {
-                xml += '<' + this.piNodeList[idx] + '>' + eol;
+                xml.push('<' + this.piNodeList[idx] + '>');
             }
         } else {
-            xml += xml_header + eol;
+            xml.push(xml_header);
         }
 
         if (this.dtdNodeList.length > 0) {
             for (let idx = 0, len = this.dtdNodeList.length; idx < len; idx += 1) {
-                xml += '<' + this.dtdNodeList[idx] + '>' + eol;
+                xml.push('<' + this.dtdNodeList[idx] + '>');
             }
         }
 
-        xml += body;
-        return xml;
+        xml.push(body);
+        return xml.join(eol);
     };
 }
 
@@ -457,7 +456,7 @@ function decodeEntities(text) {
     return text;
 }
 
-function stringify(node, name, indent, indent_string = "\t", eol = '\n', sort = true) {
+function stringify(node, name, indent, indentString = "\t", eol = '\n', sort = true) {
     // Compose node into XML including attributes
     let xml = "";
 
@@ -475,7 +474,7 @@ function stringify(node, name, indent, indent_string = "\t", eol = '\n', sort = 
     }
 
     // Set up the indent text
-    const indent_text = "".padStart(indent * indent_string.length, indent_string);
+    const indent_text = String.prototype.padStart(indent * indentString.length, indentString);
 
     if (node && typeof node === 'object') {
         // node is object -- now see if it is an array or hash
@@ -491,7 +490,7 @@ function stringify(node, name, indent, indent_string = "\t", eol = '\n', sort = 
                 const sorted_keys = sort ? hashKeysToArray(node["_Attribs"]).sort() : hashKeysToArray(node["_Attribs"]);
                 for (let idx = 0, len = sorted_keys.length; idx < len; idx += 1) {
                     const key = sorted_keys[idx];
-                    xml += " " + key + "=\"" + encodeAttribEntities(node["_Attribs"][key]) + "\"";
+                    xml += " " + key + '="' + encodeAttribEntities(node["_Attribs"][key]) + '"';
                 }
             } // has attribs
 
@@ -511,7 +510,7 @@ function stringify(node, name, indent, indent_string = "\t", eol = '\n', sort = 
                         const key = sorted_keys[idx];
                         if (key !== "_Attribs" && key.match(re_valid_tag_name)) {
                             // recurse for node, with incremented indent value
-                            xml += stringify(node[key], key, indent + 1, indent_string, eol, sort);
+                            xml += stringify(node[key], key, indent + 1, indentString, eol, sort);
                         } // not _Attribs key
                     } // foreach key
 
@@ -526,7 +525,7 @@ function stringify(node, name, indent, indent_string = "\t", eol = '\n', sort = 
             // node is array
             for (let idx = 0; idx < node.length; idx += 1) {
                 // recurse for node in array with same indent
-                xml += stringify(node[idx], name, indent, indent_string, eol, sort);
+                xml += stringify(node[idx], name, indent, indentString, eol, sort);
             }
         } // array of nodes
     } // complex node
@@ -608,13 +607,14 @@ function numKeys(hash) {
     // count the number of keys in a hash
     let count = 0;
     for (let a in hash) {
-        count++;
+        count += 1;
     }
     return count;
 }
 
 module.exports = {
     XML,
+    Parser : XML,
     parse,
     trim,
     encodeEntities,
