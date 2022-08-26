@@ -170,8 +170,6 @@ class XML {
                     const num_leaf_keys = numKeys(leaf);
                     if (leaf[this.dataKey] !== undefined && num_leaf_keys === 1) {
                         leaf = leaf[this.dataKey];
-                    } else if (!num_leaf_keys) {
-                        leaf = '';
                     }
 
                     // Add leaf to parent branch
