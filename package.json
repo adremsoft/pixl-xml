@@ -1,5 +1,5 @@
 {
-  "name": "pixl-xml",
+  "name": "@adremsoft/pixl-xml",
   "version": "1.0.13",
   "description": "A simple module for parsing and composing XML.",
   "author": "Joseph Huckaby <jhuckaby@gmail.com>",
@@ -16,6 +16,9 @@
   "keywords": [
     "xml"
   ],
+  "publishConfig": {
+    "@adremsoft:registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {},
   "devDependencies": {}
 }
