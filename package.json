@@ -6,13 +6,6 @@
   "homepage": "https://github.com/jhuckaby/pixl-xml",
   "license": "MIT",
   "main": "xml.js",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jhuckaby/pixl-xml"
-  },
-  "bugs": {
-    "url": "https://github.com/jhuckaby/pixl-xml/issues"
-  },
   "keywords": [
     "xml"
   ],
