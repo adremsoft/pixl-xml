@@ -6,6 +6,9 @@
   "homepage": "https://github.com/jhuckaby/pixl-xml",
   "license": "MIT",
   "main": "xml.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
   "keywords": [
     "xml"
   ],
